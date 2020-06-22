@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from datetime import datetime
-import scipy.stats
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -53,18 +52,36 @@ select['accum']=0
 #Calculates accumulated cases and doubling number
 for i in range (1,len(select)):
     select['accum'].loc[i]=select.accum.loc[i-1]+select.cases.loc[i-1]
-for i in range (0,len(select)-1):
-    select['dupnum'].loc[i]=np.log(2)/np.log(select.accum.loc[i+1]/select.accum.loc[i])
-    
-#dupnum has a problem: it´s calculated on the accum number which is alway growing: so dupnum can´t be negative. Maybe that´s
-# why R0 is more informative.
 
-
+#Gather data about new ICU and death cases by day
 upperlimcases=select.cases.max()
 
 AntalDagRegion['date']=AntalDagRegion['Statistikdatum']
 
+Avlidna_dag=pd.read_excel(r'data_fhm.xls',sheet_name='Antal avlidna per dag') #df for each deads/day and ICU/day
+Avlidna_dag.drop(Avlidna_dag.index[-1], inplace=True)
+Avlidna_dag.rename(columns={'Datum_avliden':'date'},inplace=True)
+Avlidna_dag.set_index('date',inplace=True,drop=True)
 
+#Avlidna_dag['Datum_avliden']=Avlidna_dag['Datum_avliden'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
+
+IVA_dag=pd.read_excel(r'data_fhm.xls',sheet_name='Antal intensivvårdade per dag')
+
+IVA_dag.rename(columns={'Antal_intensivvårdade': 'antal_iva', 'Datum_vårdstart':'date'},inplace=True)
+IVA_dag.set_index('date',inplace=True,drop=True)
+
+#Create a DF with both IVA and death number per date
+    #First add missing days in death df
+lista_i=['2020-03-06','2020-03-07','2020-03-08','2020-03-09','2020-03-10']
+lista_index=[]
+for u in lista_i:
+    lista_index.append(datetime.strptime(u, '%Y-%m-%d'))
+df_fill_avlidna=pd.DataFrame(data=0, index=lista_index,columns=['Antal_avlidna'])
+avlidna=pd.concat([df_fill_avlidna,Avlidna_dag])
+
+#now merge both IVA and death df
+
+IVA_avlidna=pd.merge(IVA_dag,Avlidna_dag,left_index=True, right_index=True)
 
 #%% Test gather data from google
 google_raw=pd.read_csv(r'data_google.csv',encoding='latin1')
@@ -120,26 +137,13 @@ transposed_apple.reset_index(inplace=True,drop =True)
 correction=transposed_apple.transit[0]
 
 
-print (transposed_apple.head(40))
+
 
 
 # In[5]:
 
 
 #Draw the plots
-
-
-#Daily cases
-plt.figure(figsize=(10,5)) 
-plt.grid(alpha=0.2)
-foax=plt.subplot()
-
-
-#plt.subplot (2,1,1)
-#plt.plot(AntalDagRegion[Region],linestyle="",marker='^')
-plt.bar(range(len(AntalDagRegion[Region])),AntalDagRegion[Region])
-#plt.axis([10,90,0,(upperlimcases)*1.2])
-
 
 #Functions for plotting x axis (time to string) in all graphs
 xticks=lambda x: range(0,len(x),5)
@@ -149,22 +153,46 @@ def xticklabels(serie):
     return lista_xticklabels
 
 
+#Daily cases
+plt.figure(figsize=(10,5)) 
+plt.grid(alpha=0.2)
+foax=plt.subplot()
+#plt.subplot (2,1,1)
+#plt.plot(AntalDagRegion[Region],linestyle="",marker='^')
+plt.bar(range(len(AntalDagRegion[Region])),AntalDagRegion[Region])
+#plt.axis([10,90,0,(upperlimcases)*1.2])
 
 
 foax.set_xticks(xticks(AntalDagRegion[Region]))
 foax.set_xticklabels(xticklabels(AntalDagRegion.Statistikdatum),rotation=30)
-title_foax="Day cases in ",Region
+title_foax="Day cases in "+Region+' until '+str(AntalDagRegion.Statistikdatum.iloc[-1])
 plt.title(title_foax)
-
-#Finds x value that has date 30/04 to place a vertical line.
-def find_x(serieX):
-    xt=serieX.apply(lambda x: datetime.strftime(x, '%d/%m'))
-    x=list(xt).index('30/04')
-    return x
-
-#plt.axvline(find_x(AntalDagRegion['Statistikdatum']),color='y')
-# 
 plt.show()
+
+#Death and IVA / day               FALTA ANADIR TYCKS!!!!!!!!!
+
+
+
+
+plt.figure(figsize=(10,5)) 
+diax=plt.subplot()
+diax.grid(alpha=0.2)
+diax_twin=diax.twinx()
+diax_twin.plot(range(len(IVA_avlidna)),IVA_avlidna.antal_iva,
+          ls="",marker='D',mfc=(1.0, 0.47, 0.42),label='New ICU patients')
+
+diax.bar(range(len(IVA_avlidna)),IVA_avlidna.Antal_avlidna,
+         alpha=0.6,label='Deaths')
+diax.legend(loc=2)
+diax_twin.legend(loc=1)
+title_diax="Deaths and new ICU patients by day"
+diax_tyck_list=pd.DataFrame(IVA_avlidna.index)
+diax.set_xticks(xticks(diax_tyck_list))
+diax.set_xticklabels(xticklabels(diax_tyck_list.date),rotation=30)
+plt.title(title_diax)
+plt.show()
+
+#%%
 
 #Google
 plt.figure(figsize=(10,5)) 
@@ -180,8 +208,8 @@ goax.set_xticklabels(xticklabels(toplot.date),rotation=30)
 plt.legend(loc=2)
 #plt.axis([10,90,-60,90])
 
-title='Google: Mobility variation in', reggoogle
-plt.title(title)
+title='Google: Mobility variation in '+reggoogle
+plt.title(title) 
 plt.show()
 
 #Apple. Only data for land
@@ -200,17 +228,6 @@ if Region=="Sverige":
     apax.set_xticklabels(xticklabels(transposed_apple.date),rotation=30)
     plt.title(title)
     plt.show() 
-
-#Doubling number
-plt.figure(figsize=(10,5)) 
-doax=plt.subplot()
-plt.plot(select.dupnum,linestyle="",marker="*")
-plt.axis([10,90,0,55])
-title='Duplication number in ', reggoogle
-doax.set_xticks(xticks(AntalDagRegion[Region]))
-doax.set_xticklabels(xticklabels(AntalDagRegion.Statistikdatum),rotation=30)
-plt.title(title)
-plt.show()
 
 
 
