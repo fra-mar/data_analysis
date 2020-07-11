@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-#Analysis from Folkhalsomyndigheten Covid 19 daily Excel file
+# In[1]:#Analysis from Folkhalsomyndigheten Covid 19 daily Excel file
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -13,12 +10,15 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-#%%
+#%% import requests
 import requests
 
 url_fhm='https://www.arcgis.com/sharing/rest/content/items/b5e7488e117749c19881cce45db13f7e/data'
 url_google='https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=3ec772aac6061acf'
-url_apple='https://covid19-static.cdn-apple.com/covid19-mobility-data/2010HotfixDev21/v3/en-us/applemobilitytrends-2020-06-17.csv'
+#url_apple='https://covid19-static.cdn-apple.com/covid19-mobility-data/2010HotfixDev34/v3/en-us/applemobilitytrends-2020-06-29.csv'
+url_apple='https://covid19-static.cdn-apple.com/covid19-mobility-data/2011HotfixDev16/v3/en-us/applemobilitytrends-2020-07-06.csv'
+
+
 
 r_fhm=requests.get(url_fhm, allow_redirects=True)
 r_google=requests.get(url_google, allow_redirects=True)
@@ -27,10 +27,7 @@ r_apple=requests.get(url_apple, allow_redirects=True)
 open('data_fhm.xls','wb').write(r_fhm.content) 
 open('data_google.csv','wb').write(r_google.content)  
 open('data_apple.csv','wb').write(r_apple.content)  
-# In[2]:
-
-
-#Gather data from FolkHälsoMyndigheten
+# In[2]:#Gather data from FolkHälsoMyndigheten
 AntalDagRegionComplete=pd.read_excel(r'data_fhm.xls',
                             sheet_name='Antal per dag region')
 AntalDagRegion=AntalDagRegionComplete.loc[11:,]
@@ -110,9 +107,6 @@ toplot.reset_index(inplace=True,drop=True)
 
 
 
-# In[4]:
-
-
 #Gather data form apple, in https://www.apple.com/covid19/mobility SAVE as .csv!!! and not .xls
 apple_mobility=pd.read_csv(r'data_apple.csv',encoding='latin1')
 
@@ -140,10 +134,7 @@ correction=transposed_apple.transit[0]
 
 
 
-# In[5]:
-
-
-#Draw the plots
+# In[5]:#Draw the plots
 
 #Functions for plotting x axis (time to string) in all graphs
 xticks=lambda x: range(0,len(x),5)
@@ -168,9 +159,6 @@ foax.set_xticklabels(xticklabels(AntalDagRegion.Statistikdatum),rotation=30)
 title_foax="Day cases in "+Region+' until '+str(AntalDagRegion.Statistikdatum.iloc[-1])
 plt.title(title_foax)
 plt.show()
-
-#Death and IVA / day               FALTA ANADIR TYCKS!!!!!!!!!
-
 
 
 
