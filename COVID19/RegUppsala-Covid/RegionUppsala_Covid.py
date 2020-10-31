@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 
 try:
     
-    url = 'https://regionuppsala.se/contentassets/bba2a35f5e6842c68b8cc39040e43714/201029-nulagesbild-covid-19-region-uppsala-excel.xlsx'
+    url = 'https://regionuppsala.se/contentassets/bba2a35f5e6842c68b8cc39040e43714/201030-nulagesbild-covid-19-region-uppsala-excel.xlsx'
     
     
     df_PCR = pd.read_excel (url, sheet_name='PCR per dag', header=2, usecols=[0,1,2,6])
@@ -62,7 +62,7 @@ except:
 
 #%% calculates % positive PCR
 
-df_PCR['PCR_positive%'] = df_PCR.PCR_positive / df_PCR.PCR_done
+df_PCR['PCR_positive%'] = df_PCR.PCR_positive / df_PCR.PCR_done *100
 
 #%%fitting curve  BETA. Stackoverflow recommends interpolate (see below)
 
@@ -76,7 +76,7 @@ def data_to_plot (df_row):
       
     x=np.arange(0, len(df_toplot)  ) #These are 3 core lines to get a fitted curve
        
-    coefs = poly.polyfit (x, df_toplot[data_name],  10)
+    coefs = poly.polyfit (x, df_toplot[data_name],  9)
     
     ffit = poly.polyval (x, coefs)
     
@@ -109,7 +109,8 @@ df_ward_toplot = data_to_plot (df_admitted.Admitted)
 
 df_ICU_toplot = data_to_plot (df_admitted.ICU)
 
-f=plt.figure('Region Uppsala, admitted and %positive PCR',figsize=(10,10),facecolor=('0.9'),edgecolor='black')
+f=plt.figure('Region Uppsala, admitted and %positive PCR',figsize=(10,10),
+             facecolor=('0.9'),edgecolor='black')
 
 #                               subplot admitted ward and ICU
 
@@ -118,7 +119,7 @@ f=plt.figure('Region Uppsala, admitted and %positive PCR',figsize=(10,10),faceco
 
 ward = f.add_subplot(2,1,1)
 
-ward.plot(df_ward_toplot.Admitted, c = 'b', alpha = 0.2)
+ward.plot(df_ward_toplot.Admitted, c = 'b', ls =  '--', alpha = 0.2)
 ward.plot(df_ward_toplot.fitted, c = 'b')
 
 ward.set_ylabel('In general ward')
@@ -129,20 +130,22 @@ ward.set_title(title)
 
 icu= ward.twinx()
 
-icu.plot(df_ICU_toplot.ICU, c = 'r', alpha = 0.2)
+icu.plot(df_ICU_toplot.ICU, c = 'r', ls = ':', alpha = 0.2)
 icu.plot(df_ICU_toplot.fitted, c = 'r')
 
 icu.set_ylabel('In ICU')
 
 #                               subplot PCR
-title = 'Region Uppsala. Positive PCR (% of all done). Uppdated ' + uppdated_date_PCR
+title = 'Region Uppsala. Uppdated ' + uppdated_date_PCR
 
 pcr = f.add_subplot(2,1,2)
 
 pcr.plot(df_PCR_toplot['PCR_positive%'], c = 'g', alpha = 0.2 )
 pcr.plot(df_PCR_toplot.fitted, c = 'g', alpha = 1)
 
-pcr.set_ylim(0,0.1)
+pcr.set_ylim(0,10)
+
+pcr.set_ylabel( 'Positive PCR (% of all done).')
 
 pcr.set_title(title)
 
