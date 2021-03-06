@@ -13,34 +13,48 @@ import numpy.polynomial.polynomial as poly #tried to fit the curves
 
 from matplotlib import pyplot as plt
 
+from datetime import *
+
+
 #%% import excel from regionuppsala.se
 
 # import PCR tests
 
 try:
     
-    url = 'https://regionuppsala.se/contentassets/bba2a35f5e6842c68b8cc39040e43714/201030-nulagesbild-covid-19-region-uppsala-excel.xlsx'
+    today = datetime.now()  #builds url for todays report and try to download it
     
+    today_str = today.strftime('%Y%m%d')
     
-    df_PCR = pd.read_excel (url, sheet_name='PCR per dag', header=2, usecols=[0,1,2,6])
+    today_str = today_str[2:]
+    
+    url_str = 'https://regionuppsala.se/contentassets/bba2a35f5e6842c68b8cc39040e43714/'
+    
+    url = url_str + today_str + '-nulagesbild-covid-19-region-uppsala-excel.xlsx'
+    
+    #url = 'https://regionuppsala.se/contentassets/bba2a35f5e6842c68b8cc39040e43714/210301-nulagesbild-covid-19-region-uppsala-excel.xlsx'
+    
+    df_PCR = pd.read_excel (url, sheet_name='PCR per dag', header=0, usecols=[0,1,2,6])
+    print ('a')
     
     df_PCR.rename( columns={'Datum':'Date', 'Antal prover':'PCR_done', 
                                  'Antal positiva prov':'PCR_positive',
                                  'Antal analys ej klar':'PCR_incomplete'}
                   , inplace=True)
-    
+    print ('aa')
     df_PCR.set_index ('Date', drop = True, inplace = True)
-    
+    print ('b')
     # import admitted
     
     df_admitted = pd.read_excel (url, sheet_name='Slutenvård per dag', header=2, usecols=[0,1,2])
+    print ('c')
     
     df_admitted.rename( columns={'Datum':'Date', 'Antal patienter':'Admitted', 
                                  'Antal vårdade IVA':'ICU'}, inplace=True)                   
     
     df_admitted.set_index ('Date', drop = True, inplace = True)
     
-    #save backup file in case website finish to publish
+    #save backup file in case downloading fails
     
     with pd.ExcelWriter('RegUppsala_COVID_nubild_backup.xlsx') as writer:  
         
@@ -60,7 +74,7 @@ except:
     
     df_admitted.set_index ('Date', drop = True, inplace = True)
 
-#%% calculates % positive PCR
+#%% calculates % positive PCR....actually it is reported in recent reports.
 
 df_PCR['PCR_positive%'] = df_PCR.PCR_positive / df_PCR.PCR_done *100
 
@@ -69,7 +83,7 @@ df_PCR['PCR_positive%'] = df_PCR.PCR_positive / df_PCR.PCR_done *100
 def data_to_plot (df_row):
 
     
-    df_toplot = pd.DataFrame (df_row[df_row.index.month> from_month] )
+    df_toplot = pd.DataFrame (df_row[(df_row.index.month> from_month) | (df_row.index.year == 2021) ] )
     
     data_name = df_toplot.columns[0]
     
@@ -112,9 +126,7 @@ df_ICU_toplot = data_to_plot (df_admitted.ICU)
 f=plt.figure('Region Uppsala, admitted and %positive PCR',figsize=(10,10),
              facecolor=('0.9'),edgecolor='black')
 
-#                               subplot admitted ward and ICU
-
-
+# subplot admitted ward and ICU
 
 
 ward = f.add_subplot(2,1,1)
@@ -122,7 +134,7 @@ ward = f.add_subplot(2,1,1)
 ward.plot(df_ward_toplot.Admitted, c = 'b', ls =  '--', alpha = 0.2)
 ward.plot(df_ward_toplot.fitted, c = 'b')
 
-ward.set_ylabel('In general ward')
+ward.set_ylabel('In general ward (blue)')
 
 title = 'Region Uppsala. In-hospital patients in a given day. Uppdated ' + uppdated_date_adm
 
@@ -133,7 +145,7 @@ icu= ward.twinx()
 icu.plot(df_ICU_toplot.ICU, c = 'r', ls = ':', alpha = 0.2)
 icu.plot(df_ICU_toplot.fitted, c = 'r')
 
-icu.set_ylabel('In ICU')
+icu.set_ylabel('In ICU (red)')
 
 #                               subplot PCR
 title = 'Region Uppsala. Uppdated ' + uppdated_date_PCR
@@ -143,7 +155,7 @@ pcr = f.add_subplot(2,1,2)
 pcr.plot(df_PCR_toplot['PCR_positive%'], c = 'g', alpha = 0.2 )
 pcr.plot(df_PCR_toplot.fitted, c = 'g', alpha = 1)
 
-pcr.set_ylim(0,10)
+#pcr.set_ylim(0,20)
 
 pcr.set_ylabel( 'Positive PCR (% of all done).')
 
